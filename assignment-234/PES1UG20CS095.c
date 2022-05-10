@@ -215,6 +215,87 @@ static void buildShiftTableq7(int patternLen, const char *pat, int shiftTable[AS
     }
 }
 
+static void generateNodesq8(int n,int excluded, int graph[n-1]){
+    int i = 0;
+    int j = 0;
+    while (i < n){
+        if (i != excluded){
+            graph[j] = i;
+            j++;
+        }
+        i++;
+    }
+}
+
+static void swapq8(int *x, int *y){
+    int temp = *x;
+    *x = *y;
+    *y = temp;
+}
+
+static int shuffleq8(int n, int graph[n]){
+    int i;
+    int left;
+    int right;
+    int mid,diff,c=-1;
+
+    i = n - 2; 
+    while (i >= 0 && graph[i] >= graph[i+1]){
+        i--;
+    }
+    if (i < 0){
+        return 0;
+    }    
+    left = i +1;
+    right = n -1;
+    while (left <= right){
+        diff = right - left;
+        mid = left + (diff)/2;
+
+        if (graph[mid] > graph[i]){
+            left = mid +1;
+            if ((c == -1) && (graph[c] >= graph[mid])){
+                c = mid;
+            }
+        }
+        else{
+            right = mid - 1;
+        }
+    }
+
+    swapq8(&graph[i],&graph[c]);
+
+    left = i + 1;
+    right = n - 1;
+    while (left < right){
+        left++;
+        right--;
+        swapq8(&graph[left],&graph[right]);
+    }
+    return 1;
+}
+
+static void computeDistanceq8(int n, int graph[n], const connection_t connections[n][n], int *distance, int *disconnected){
+    *disconnected = 0;
+    *distance = 0;
+
+    for (int i = 0; i < n - 1; i++){
+        if (connections[graph[i]][graph[(i+1)%(n-1)]].distance != INT_MAX){
+            *distance += connections[graph[i]][graph[(i+1)%(n-1)]].distance;
+        }
+        else{
+            *disconnected = 1;
+            return;
+        }
+    }
+}
+
+static void writeTripq8(int n, int trip_order[n], int graph[n-1]){
+    for (int i = 0; i < n-1; i++){
+        trip_order[i]  = graph[i];
+    }
+}
+
 static int getNextAdditionq9(int curr, int n, const connection_t connections[n][n], int edgeTime[n], int inMST[n]){
     int currentMin = INT_MAX;
     int next;
@@ -392,7 +473,34 @@ void q7(int n, const char *pat, int contains[n], const airport_t airports[n])
 
 int q8(int n, int trip_order[n - 1], const connection_t connections[n][n])
 {
-    return 0;
+    int shortest = INT_MAX;
+    int graph[n-1];
+    int flag;
+    int disconnected;  // set to 1 if a disconnection detected in graph
+    int distance;       // compute and store distances in graph
+
+    for (int excluded = 0; excluded < n; ++excluded){
+        generateNodesq8(n, excluded, graph);
+        flag = 1;
+
+        while(flag){
+            computeDistanceq8(n, graph, connections, &distance, &disconnected);
+
+            if ((distance < shortest) && (!disconnected)){
+                shortest = distance;
+                writeTripq8(n, trip_order, graph);
+            }
+
+            flag = shuffleq8(n - 1, graph);
+        }
+
+    }
+    
+    if (shortest == INT_MAX)
+        shortest = -1;
+
+
+    return shortest;
 }
 
 int q9(int n, pair_t edges[n - 1], const connection_t connections[n][n])
